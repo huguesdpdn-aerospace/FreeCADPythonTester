@@ -3,9 +3,9 @@ import time
 
 
 
-__title__  =   "FreeCAD Python auto executor Workbench"
+__title__  =   "Python tester looper"
 __author__ =   "Hugues DU POUGET DE NADAILLAC"
-__url__    = [ "http://www.freecadweb.org" ]
+__url__    = [ "https://github.com/huguesdpdn-aerospace/FreeCADPythonTesterLooper" ]
 
 
 
@@ -63,7 +63,7 @@ def MonitorFileThreadedFunction(python_auto_executor_class):
 class PythonAutoExecutor(FreeCADGui.Workbench):
     def __init__(self, run_without_freecad):
         import InitPath
-        self.__class__.MenuText      = "Python executor loop"
+        self.__class__.MenuText      = "Python tester looper"
         self.__class__.ToolTip       = "A workbench that detects code changes and launch your Python script for each new change"
         self.__class__.Icon          = os.path.join(InitPath.getWorkbenchPath(), "images", "PythonLogo.svg")
         self.__run_without_freecad   = run_without_freecad
