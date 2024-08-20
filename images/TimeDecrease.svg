@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg">
+  <path style="fill:#aa0000" d="M 4,0 H 156 Q 160,0 160,4 Q 160,8 156,8 H 4 Q 0,8 0,4 Q 0,0 4,0 Z"/>
+  <path style="fill:#aa0000" d="M 4,152 H 156 Q 160,152 160,156 Q 160,160 156,160 H 4 Q 0,160 0,156 Q 0,152 4,152 Z"/>
+  <path style="fill:#77ccff" d="M 24,8 V 32 Q 24,72 64,72 Q 72,72 72,80 Q 72,88 64,88 Q 24,88 24,128 V 152 H 136 V 128 Q 136,88 96,88 Q 88,88 88,80 Q 88,72 96,72 Q 136,72 136,32 V 8 H 24 Z"/>
+  <polygon points="40,152 80,104 120,152" style="fill:#ffdd77"/>
+  <path style="fill:#ffdd77" d="M  30,40 Q  32,68 72,68 Q 76,72 76,76 H 80 V 40 Z"/>
+  <path style="fill:#ffdd77" d="M 130,40 Q 128,68 88,68 Q 84,72 84,76 H 80 V 40 Z"/>
+  <rect x="76"  y="64" width="8" height="48" style="fill:#ffdd77"/>
+  <!-- <rect x="112" y="88"  width="16" height="64" style="fill:#00aa00"/> -->
+  <!-- <rect x="88"  y="112" width="64" height="16" style="fill:#00aa00"/> -->
+  <rect x="88"  y="96" width="64" height="16" style="fill:#000000"/>
+</svg>

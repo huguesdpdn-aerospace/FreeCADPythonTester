@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="20,4 100,4 140,44 140,156 20,156" style="stroke:#666666;stroke-width:8;fill:white"/>
+  <line x1="96"  y1="44"  x2="140" y2="44"  style="stroke:#666666;stroke-width:8"/>
+  <line x1="100" y1="4"   x2="100" y2="44"  style="stroke:#666666;stroke-width:8"/>
+  <line x1="30"  y1="20"  x2="90"  y2="20"  style="stroke:#aaaaaa;stroke-width:8"/>
+  <line x1="30"  y1="40"  x2="90"  y2="40"  style="stroke:#aaaaaa;stroke-width:8"/>
+  <line x1="30"  y1="60"  x2="130" y2="60"  style="stroke:#aaaaaa;stroke-width:8"/>
+  <line x1="30"  y1="80"  x2="130" y2="80"  style="stroke:#aaaaaa;stroke-width:8"/>
+  <line x1="30"  y1="100" x2="130" y2="100" style="stroke:#aaaaaa;stroke-width:8"/>
+  <line x1="30"  y1="120" x2="130" y2="120" style="stroke:#aaaaaa;stroke-width:8"/>
+  <line x1="30"  y1="140" x2="130" y2="140" style="stroke:#aaaaaa;stroke-width:8"/>
+  <path style="fill:#3333ff" d="M  46,85  L  33,72  Q  79,27  125,73  L 112,86  Q  79,52  46,85  Z"/>
+  <path style="fill:#3333ff" d="M 114,114 L 127,127 Q  82,172  35,126 L  48,113 Q 81,146 114,114 Z"/>
+  <polygon points="129,59  124,107 86,79" style="fill:#3333ff"/>
+  <polygon points=" 73,120  30,140 34,92" style="fill:#3333ff"/>
+</svg>

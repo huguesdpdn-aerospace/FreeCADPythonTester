@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="52.5,0 107.5,0 160,52.5 160,107.5 107.5,160 52.5,160 0,107.5 0,52.5" style="fill:#ffffff"/>
+  <polygon points="  55,5   105,5 155,55   155,105     105,155   55,155 5,105   5,55"   style="fill:#ff0000"/>
+</svg>
