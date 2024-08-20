@@ -50,7 +50,7 @@ def MonitorFileThreadedFunction(python_auto_executor_class):
                         if not python_auto_executor_class.FileOrDirectoryShouldBeIgnored(path_file_that_may_not_be_monitored):
                             python_auto_executor_class.AddFileToMonitor(path_file_that_may_not_be_monitored)
             for file_class in python_auto_executor_class.getMonitoredFilesClassList():
-                python_auto_executor_class.Log("Thread: Checking file {0}".format(file_class.GetFilePathName()))
+                python_auto_executor_class.Log("Thread: Checking file {0}".format(file_class.GetFilePathAndName()))
                 file_class.RefreshFileStatus()
             time.sleep(python_auto_executor_class.getSleepTime())
             max_loops = max_loops - 1
@@ -97,21 +97,21 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
 
     def FileIsAlreadyMonitored(self, file_path_name):
         for file_class in self.__files_monitored:
-            if file_class.GetFilePathName() == file_path_name:
+            if file_class.GetFilePathAndName() == file_path_name:
                 return True
         return False
     
     def AddFileToMonitor(self, file_path_name):
         import MonitoredObject
         if not self.FileIsAlreadyMonitored(file_path_name):
-            self.__files_monitored.append(MonitoredObject.MonitoredObject(True, file_path_name))
+            self.__files_monitored.append(MonitoredObject.MonitoredObject(file_path_name))
             self.__last_file_added = file_path_name
 
     def AddFolderToMonitor(self, folder_path_name):
         import MonitoredObject
         if not self.FileOrDirectoryShouldBeIgnored(folder_path_name):
             if not self.FileIsAlreadyMonitored(folder_path_name):
-                self.__directories_monitored.append(MonitoredObject.MonitoredObject(False, folder_path_name))
+                self.__directories_monitored.append(MonitoredObject.MonitoredObject(folder_path_name))
                 self.__last_dir__added = folder_path_name
 
     def FileOrDirectoryShouldBeIgnored(self, file_name_to_check):
@@ -129,6 +129,9 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
                 return True
         return False
 
+    ####################################################################
+    ## To rewrite, full bullshit
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     def __LoadLastMonitoredFilesFromCache(self):
         if os.path.isfile(self.__cache_file):
             try:
@@ -143,10 +146,13 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
                     self.AddFileToMonitor(file_or_directory)
                 elif os.path.isdir(file_or_directory):
                     for file in os.listdir(file_or_directory):
+                        # Should be a class, not a true path
                         self.__directories_monitored.append(file_or_directory)
                         self.AddFileToMonitor.append(file_or_directory)
                 else:
                     self.Log("[PythonAutoExecutor]: Ignoring file named '{0}' since it is not a regular file or directory".format(file_or_directory))
+    ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ####################################################################
 
     def getSleepTime(self):
         return self.__monitoring_time
@@ -170,7 +176,7 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
         return self.__directories_monitored
 
     def getMonitoredDirectoriesPathList(self):
-        return [ folder_class.GetDirectoryPathName() for folder_class in self.__directories_monitored ]
+        return [ folder_class.GetFilePathAndName() for folder_class in self.__directories_monitored ]
 
     def getMonitoredFilesClassList(self):
         return self.__files_monitored
