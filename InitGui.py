@@ -1,3 +1,10 @@
+#TODO
+#Handle relative paths for:
+#__ExportMonitoredFilesAndDirectoriesInCache
+#__LoadMonitoredFilesAndDirectoriesInCache
+# When adding a .git folder => Monitor last tag/commit
+# When adding FilesAndDirectoriesToMonitor.txt => Do not use LastFilesAndDirectoriesMonitored.txt and use FilesAndDirectoriesToMonitor.txt
+
 import os
 import time
 
@@ -40,6 +47,7 @@ def MonitorFileThreadedFunction(python_auto_executor_class):
         max_loops = 20 #99999999
     try:
         while python_auto_executor_class.getRequestStopStatus() is False and max_loops > 0:
+            code_changed = False
             python_auto_executor_class.Log("Thread: Looping and detecting new files/directories that have been changed")
             python_auto_executor_class.setIfMonitoringThreadIsWorking(True)
             for directory_to_monitor in python_auto_executor_class.getMonitoredDirectoriesPathList():
@@ -51,7 +59,11 @@ def MonitorFileThreadedFunction(python_auto_executor_class):
                             python_auto_executor_class.AddFileToMonitor(path_file_that_may_not_be_monitored)
             for file_class in python_auto_executor_class.getMonitoredFilesClassList():
                 python_auto_executor_class.Log("Thread: Checking file {0}".format(file_class.GetFilePathAndName()))
-                file_class.RefreshFileStatus()
+                code_changed = file_class.LogicCodeChanged()
+                if code_changed is True:
+                    break
+            if code_changed is True:
+                python_auto_executor_class.Log("Need to recompile the Python code !")
             time.sleep(python_auto_executor_class.getSleepTime())
             max_loops = max_loops - 1
     except Exception:
@@ -67,9 +79,8 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
         self.__class__.ToolTip       = "A workbench that detects code changes and launch your Python script for each new change"
         self.__class__.Icon          = os.path.join(InitPath.getWorkbenchPath(), "images", "PythonLogo.svg")
         self.__run_without_freecad   = run_without_freecad
-        self.__cache_file            = "LastFilesAndDirectoriesMonitored.txt"
-        self.__last_file_added       = ""
-        self.__last_dir__added       = ""
+        self.__cache_file            = os.path.join(InitPath.getWorkbenchPath(), "LastFilesAndDirectoriesMonitored.txt")
+        self.__last_type_added       = ""
         self.__files_monitored       = []
         self.__directories_monitored = []
         self.__monitoring_time       = 5
@@ -78,7 +89,7 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
         self.__thread_class          = None
         self.__time_increase_active  = False
         self.__time_decrease_active  = True
-        self.__LoadLastMonitoredFilesFromCache()
+        self.__LoadMonitoredFilesAndDirectoriesInCache()
 
     def Log(self, message):
         if self.IsALocalTestRun():
@@ -89,11 +100,8 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
     def IsALocalTestRun(self):
         return self.__run_without_freecad
 
-    def GetLastAddedFile(self):
-        return self.__last_file_added
-
-    def GetLastAddedDirectory(self):
-        return self.__last_dir__added
+    def GetLastAddedType(self):
+        return self.__last_type_added
 
     def FileIsAlreadyMonitored(self, file_path_name):
         for file_class in self.__files_monitored:
@@ -105,17 +113,19 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
         import MonitoredObject
         if not self.FileIsAlreadyMonitored(file_path_name):
             self.__files_monitored.append(MonitoredObject.MonitoredObject(file_path_name))
-            self.__last_file_added = file_path_name
+            self.__last_type_added = "file"
+            self.__ExportMonitoredFilesAndDirectoriesInCache()
 
     def AddFolderToMonitor(self, folder_path_name):
         import MonitoredObject
         if not self.FileOrDirectoryShouldBeIgnored(folder_path_name):
             if not self.FileIsAlreadyMonitored(folder_path_name):
                 self.__directories_monitored.append(MonitoredObject.MonitoredObject(folder_path_name))
-                self.__last_dir__added = folder_path_name
+                self.__last_type_added = "folder"
+                self.__ExportMonitoredFilesAndDirectoriesInCache()
 
     def FileOrDirectoryShouldBeIgnored(self, file_name_to_check):
-        list_name_should_not_end_by = [ ".a", ".so", ".out", ".log", ".logs", ".tlog", ".lock", ".python-version", ".pycod", ".pyc", ".pyo", ".obj", ".iobj", ".egg", ".eggs", ".egg-info", ".cover", ".tmp", ".tmp_proj", ".cache", ".bak", ".pot", ".cfg", ".cmake", ".make", ".user",  ".userosscache", ".sln.docstates", ".suo", ".rsuser", ".userprefs", ".VisualState.xml", ".nuget.props", "*.nuget.targets" ]
+        list_name_should_not_end_by = [ ".a", ".so", ".out", ".log", ".logs", ".tlog", ".lock", ".python-version", ".pycod", ".pyc", ".pyi", ".pyo", ".obj", ".iobj", ".egg", ".eggs", ".egg-info", ".cover", ".tmp", ".tmp_proj", ".cache", ".bak", ".pot", ".cfg", ".cmake", ".make", ".user",  ".userosscache", ".sln.docstates", ".suo", ".rsuser", ".userprefs", ".VisualState.xml", ".nuget.props", ".nuget.targets", "tar", "tar.gz", "7zip", "7z", "zip", ".iso", ".img" ]
         list_name_should_not_start_by = [ "mono_crash", "coverage", ".sln", ".pdm" ]
         list_name_to_exclude = [ "__pycache__" "CMakeLists.txt" ".vs" "dlldata.c" ".history" ".vshistory" ".localhistory" "ipython_config.py" "pyenv" ]
         for file_should_not_ending_by in list_name_should_not_end_by:
@@ -129,30 +139,77 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
                 return True
         return False
 
-    ####################################################################
-    ## To rewrite, full bullshit
-    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    def __LoadLastMonitoredFilesFromCache(self):
+    def __RemoveWhitespacesAndTabulationBeforePathFileName(self, text_to_edit):
+        prefix = ""
+        if text_to_edit.startswith("file"):
+            prefix = "file"
+            text_to_return = text_to_edit[4:]
+        elif text_to_edit.startswith("folder"):
+            prefix = "folder"
+            text_to_return = text_to_edit[6:]
+        else:
+            prefix = ""
+            text_to_return = text_to_edit[:]
+        while len(text_to_return) > 0 and (text_to_return[0] == " " or text_to_return[0] == "\t"):
+            text_to_return = text_to_return[1:]
+        return prefix + " " + text_to_return
+
+    def __ExportMonitoredFilesAndDirectoriesInCache(self):
+        found_object  = False
+        file_lines    = []
+        text_to_write = ""
+        text_to_find  = ""
+        if self.GetLastAddedType() == "file":
+            text_to_find = "file " + self.getMonitoredFilesClassList()[-1].GetFilePathAndName()
+        elif self.GetLastAddedType() == "folder":
+            text_to_find = "folder " + self.getMonitoredDirectoriesClassList()[-1].GetFilePathAndName()
+        else:
+            return
         if os.path.isfile(self.__cache_file):
             try:
                 with open(self.__cache_file) as file_descriptor:
-                    file_lines = [file_line.rstrip().lstrip() for file_line in file_descriptor]
+                    file_lines = [file_line.rstrip().lstrip().replace("\r", "") for file_line in file_descriptor]
             except Exception:
                 pass
-            for file_or_directory in file_lines:
-                if self.FileOrDirectoryShouldBeIgnored(file_or_directory):
-                    self.Log("[PythonAutoExecutor]: Ignoring file or directory named '{0}' since it is not a code file".format(file_or_directory))
-                if os.path.isfile(file_or_directory):
-                    self.AddFileToMonitor(file_or_directory)
-                elif os.path.isdir(file_or_directory):
-                    for file in os.listdir(file_or_directory):
-                        # Should be a class, not a true path
-                        self.__directories_monitored.append(file_or_directory)
-                        self.AddFileToMonitor.append(file_or_directory)
-                else:
-                    self.Log("[PythonAutoExecutor]: Ignoring file named '{0}' since it is not a regular file or directory".format(file_or_directory))
-    ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ####################################################################
+            else:
+                for file_or_directory in file_lines:
+                    file_or_directory = self.__RemoveWhitespacesAndTabulationBeforePathFileName(file_or_directory)
+                    if file_or_directory == text_to_find:
+                        found_object = True
+                        break
+                if found_object is False:
+                    text_to_write = text_to_find[:] + "\n"
+        else:
+            text_to_write = text_to_find[:] + "\n"
+        if found_object is False:
+            try:
+                with open(self.__cache_file, "a") as file_descriptor:
+                    file_descriptor.write(text_to_write)
+            except Exception:
+                pass
+
+    def __LoadMonitoredFilesAndDirectoriesInCache(self):
+        file_lines       = []
+        file_line_number = 0
+        if os.path.isfile(self.__cache_file):
+            try:
+                with open(self.__cache_file) as file_descriptor:
+                    file_lines = [file_line.rstrip().lstrip().replace("\r", "") for file_line in file_descriptor]
+            except Exception:
+                pass
+            else:
+                for file_or_directory in file_lines:
+                    file_line_number = file_line_number + 1
+                    if file_or_directory.startswith("file"):
+                        file_or_directory = file_or_directory[4:].lstrip()
+                        self.AddFileToMonitor(file_or_directory)
+                    elif file_or_directory.startswith("folder"):
+                        file_or_directory = file_or_directory[6:].lstrip()
+                        self.AddFolderToMonitor(file_or_directory)
+                    elif file_or_directory.isspace():
+                        file_or_directory = ""
+                    else:
+                        FreeCAD.Console.PrintError("[PythonAutoExecutor]: Ignoring line #{0} in {1} file".format(file_line_number, file_or_directory))
 
     def getSleepTime(self):
         return self.__monitoring_time
@@ -172,11 +229,11 @@ class PythonAutoExecutor(FreeCADGui.Workbench):
     def getButtonActivationForTimeDecrease(self):
         return self.__time_decrease_active
 
-    def getMonitoredDirectoriesList(self):
-        return self.__directories_monitored
-
     def getMonitoredDirectoriesPathList(self):
         return [ folder_class.GetFilePathAndName() for folder_class in self.__directories_monitored ]
+
+    def getMonitoredDirectoriesClassList(self):
+        return self.__directories_monitored
 
     def getMonitoredFilesClassList(self):
         return self.__files_monitored
@@ -248,8 +305,8 @@ class PAEMonitorFile:
                 py_side_version = None
         path_of_last_file_added = ""
         file_dialog_class = None
-        if file_dialog_class is None:
-            path_of_last_file_added = os.path.dirname(self.__main_class.GetLastAddedFile())
+        if len(self.__main_class.getMonitoredFilesClassList()) > 0:
+            path_of_last_file_added = os.path.dirname(self.__main_class.getMonitoredFilesClassList()[-1].GetFilePathAndName())
         try:
             if py_side_version is None:
                 FreeCAD.Console.PrintError("No PySide detected - You may have to install PySide on your system - Please execute in a terminal\n")
@@ -304,8 +361,8 @@ class PAEMonitorFolder:
                 py_side_version = None
         path_of_last_folder_added = ""
         folder_dialog_class = None
-        if folder_dialog_class is None:
-            path_of_last_folder_added = os.path.dirname(self.__main_class.GetLastAddedDirectory())
+        if len(self.__main_class.getMonitoredDirectoriesClassList()) > 0:
+            path_of_last_folder_added = os.path.dirname(self.__main_class.getMonitoredDirectoriesClassList()[-1].GetFilePathAndName())
         try:
             if py_side_version is None:
                 FreeCAD.Console.PrintError("No PySide detected - You may have to install PySide on your system - Please execute in a terminal\n")

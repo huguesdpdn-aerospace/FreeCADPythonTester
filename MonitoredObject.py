@@ -1,6 +1,7 @@
 import os
 import time
 
+import python_minifier
 
 
 class MonitoredObject:
@@ -57,17 +58,25 @@ class MonitoredObject:
         return file_content
 
     def __ComputeFileHashes(self):
-        file_hash    = ""
-        file_content = ""
+        old_hash_file = self.GetLastHashFile()
+        file_hash     = ""
+        file_content  = ""
         try:
             with open(self.__path_file_name, "r") as file_descriptor:
                 file_content = file_descriptor.read()
         except Exception:
             file_content = ""
         self.__hash_file = hash(file_content)
-        if self.__path_file_name.endswith(".py"):
-            file_content = self.__FilterNonCodeStuffForPython(file_content)
-        self.__hash_code = hash(file_content)
+        if old_hash_file is None or self.__hash_file != old_hash_file:
+            try:
+                with open(self.__path_file_name, "r") as file_descriptor:
+                    print(python_minifier.minify(file_descriptor.read(), rename_locals=True, combine_imports=True, ))
+            except Exception:
+                file_content = ""
+            else:
+                if self.__path_file_name.endswith(".py"):
+                    file_content = self.__FilterNonCodeStuffForPython(file_content)
+                    self.__hash_code = hash(file_content)
 
     def __CheckIfStillExists(self):
         if self.isFile():
@@ -83,7 +92,14 @@ class MonitoredObject:
         except Exception:
             pass
 
-    def RefreshFileStatus(self):
-        if self.__CheckIfStillExists():
+    def LogicCodeChanged(self):
+        old_timestamp = self.GetLastModificationTimestamp()
+        old_hash_code = self.GetLastHashCode()
+        if self.__CheckIfStillExists():            
             self.__ComputeLastModificationDate()
-            self.__ComputeFileHashes()
+            if old_timestamp is None or self.GetLastModificationTimestamp() > old_timestamp: 
+                if self.isFile():
+                    self.__ComputeFileHashes()
+                    if self.GetLastHashCode() != old_hash_code:
+                        return True
+        return False
